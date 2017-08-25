@@ -1,0 +1,46 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+    <script src="~/Scripts/jquery-3.1.1.js"></script>
+    <script src="~/Scripts/jquery-ui-1.12.1.js"></script>
+    <script src="~/Scripts/jquery.knob.js"></script>
+    <script src="~/Scripts/MyScripts/FilesChunker.js"></script>
+</head>
+<body>
+    <form id="Myform" method="post" action="~/upload/upload" enctype="multipart/form-data">
+        <div id="drop">
+            <input type="file" name="uploadFile" id="uploadFile" multiple />
+            <input type="text" value="0" data-readOnly="true" data-min="0" data-max="100" id="knob" >
+            <input type="button" id="btnUpload" value="Upload" />
+        </div>
+    </form>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $('#knob').knob();
+
+            $('#btnUpload').click(function () {
+                var FileName = $('#uploadFile')[0].files[0].name;
+                var getURL = 'RecievedData/?id=' + FileName;
+                $('#knob')
+                    .val(0)
+                    .trigger('change');
+
+                Upload('upload', getURL, true, $('#uploadFile')[0].files[0], function (value) {
+                    $('#knob')
+                        .val(value)
+                        .trigger('change');
+                });
+        });
+    });
+    </script>
+</body>
+</html>
