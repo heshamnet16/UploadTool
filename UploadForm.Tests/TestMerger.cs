@@ -49,5 +49,11 @@ namespace UploadForm.Tests
             bool ret = m.CheckTheFiles();
             Assert.AreEqual(true, ret);
         }
+        [TestMethod]
+        public void TestgetFileNameWithoutExtension()
+        {
+            string ret = Merger.getFileNameWithoutExtension("lab 25 How to implement Validation using Angular and MVC.mp4.part_2.88",".part_");
+            Assert.AreEqual("lab 25 How to implement Validation using Angular and MVC", ret);
+        }
     }
 }

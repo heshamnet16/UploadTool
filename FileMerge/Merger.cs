@@ -80,6 +80,11 @@ namespace FileMerge
         {
             return FileName.Substring(0, FileName.IndexOf(token));
         }
+        public static string getFileNameWithoutExtension(string FileName,string token)
+        {
+            string FullFileName = getFullFileNameWithoutToken(FileName, token);
+            return Path.GetFileNameWithoutExtension(FullFileName);
+        }
         //private
         public int getFileNumber(string FileName)
         {
