@@ -44,6 +44,23 @@ namespace UploadForm.Controllers
             get { return useMemory; }
             set { useMemory = value; }
         }
+
+        public static void LoadFilesNemes(string dirPath,string token)
+        {
+            if(Directory.Exists(dirPath))
+            {
+                foreach(string file in Directory.GetFiles(dirPath))
+                {
+                    lock (LockAttribute)
+                    {
+                        if (!FilesNames.Contains(file) && file.Contains(token))
+                            FilesNames.Add(file);
+                    }
+                }
+                foreach (string dir in Directory.GetDirectories(dirPath))
+                    LoadFilesNemes(dir,token);
+            }
+        }
         public DataSaver(bool useMemory)
         {
             this.useMemory = useMemory;
@@ -82,19 +99,32 @@ namespace UploadForm.Controllers
                         throw new IOException("Directory is not Created");
 
                 }
-                string FullFileName = DirName + fileN;
+                string FullFileName = this.SaveDirectory + fileN;
                 using (FileStream Fs = new FileStream(FullFileName, FileMode.Create, FileAccess.Write))
                 {
                     Fs.Write(data, 0, data.Length);
                     Fs.Flush();
                     lock (LockAttribute)
-                    { FilesNames.Add(FullFileName); }
+                    {
+                        if(!FilesNames.Contains(FullFileName))
+                            FilesNames.Add(FullFileName);
+                    }
                 }
                 return true;
             }catch(Exception ex)
             { throw ex;}
         }
-
+        public static List<string> getCustomList(string searchTocken)
+        {
+            lock(LockAttribute)
+            {
+               List<string> temp = FilesNames.Where(x => x.Contains(searchTocken)).ToList();
+                if (temp != null && temp.Count > 0)
+                    return temp;
+                else
+                    return null;
+            }
+        }
         public bool SaveFile(string FileName, object file)
         {
             if (file is MemoryStream)
@@ -136,7 +166,7 @@ namespace UploadForm.Controllers
                 {
                     File.Delete(FileName);
                     lock (LockAttribute)
-                        FilesNames.Remove(this.SaveDirectory + FileName);
+                        FilesNames.Remove(FileName);
                     return true;
                 }
                 else
@@ -147,7 +177,7 @@ namespace UploadForm.Controllers
                         File.Delete(FullFileName);
                         lock(LockAttribute)
                         {
-                            FilesNames.Remove(this.SaveDirectory + FileName);
+                            FilesNames.Remove(FullFileName);
                         }
                     }
                     return true;
@@ -243,7 +273,11 @@ namespace UploadForm.Controllers
     {
         //public static Dictionary<string, byte[]> DataStream = new Dictionary<string, byte[]>();
         //public static List<string> FilesNames = new List<string>();
+        public static Object lockToken = new Object();
         private string token = ".part_";
+        public UploadController()
+        {
+        }
         // GET: Upload
         public ActionResult Index()
         {
@@ -252,35 +286,40 @@ namespace UploadForm.Controllers
         [HttpPost]
         public ActionResult Upload()
         {
-            bool ret = true;
+            bool ret = false;
             string fileName = string.Empty;
             DataSaver dtS = new DataSaver(false);
             dtS.CreateSubDirectory = true;
-                try
+            try
+            {
+                for (int i = 0; i < Request.Files.Count; i++)
                 {
-                    for (int i = 0; i < Request.Files.Count; i++)
-                    {
-                        HttpPostedFileBase hpf = Request.Files[i] as HttpPostedFileBase;
-                        if (hpf.ContentLength == 0) continue;
-                        fileName = Path.GetFileName(hpf.FileName);
-                        MemoryStream ChunckStream = new MemoryStream();
-                        hpf.InputStream.CopyTo(ChunckStream);
-                        dtS.SaveDirectory = Server.MapPath("~/Uploads/") + Merger.getFileNameWithoutExtension(fileName,this.token);
-                        dtS.SaveFile(fileName, ChunckStream.ToArray());
-                        ChunckStream.Close();
-                        ChunckStream.Dispose();
-                    }
+                    HttpPostedFileBase hpf = Request.Files[i] as HttpPostedFileBase;
+                    if (hpf.ContentLength == 0) continue;
+                    fileName = Path.GetFileName(hpf.FileName);
+                    MemoryStream ChunckStream = new MemoryStream();
+                    hpf.InputStream.CopyTo(ChunckStream);
+                    dtS.SaveDirectory = Path.Combine(Server.MapPath("~/Uploads/") +
+                        Merger.getFileNameWithoutExtension(fileName, this.token));
+                    dtS.SaveFile(fileName, ChunckStream.ToArray());
+                    ChunckStream.Close();
+                    ChunckStream.Dispose();
                 }
-                catch { ret = false; }
-
-                
-                string savedFileName = Path.Combine(Server.MapPath("~/Uploads"), Merger.getFullFileNameWithoutToken(fileName,this.token));
-                Merger m = new Merger(DataSaver.FilesNames, savedFileName, this.token, '.');
+            }
+            catch { ret = false; }
+            lock (lockToken)
+            {
+                string FileNameWT = Merger.getFullFileNameWithoutToken(fileName, this.token);
+                string savedFileName = Path.Combine(Server.MapPath("~/Uploads"), FileNameWT);
+                List<string> temp = DataSaver.getCustomList(FileNameWT);
+                Merger m = new Merger(temp, savedFileName, this.token, '.');
                 if (m.CheckTheFiles())
                 {
                     m.Merge();
-                    dtS.DeleteAllEntries(fileName);
+                    dtS.DeleteAllEntries(Merger.getFullFileNameWithoutToken(fileName, this.token));
+                    ret = true;
                 }
+            }
             if (ret)
                 return Json("Success :)", JsonRequestBehavior.AllowGet);
             else
@@ -293,8 +332,22 @@ namespace UploadForm.Controllers
             string filename = Request.Params["id"];
             int Max = 0;
             DataSaver dts = new DataSaver(false);
-            dts.SaveDirectory = Server.MapPath("~/Uploads") + Merger.getFileNameWithoutExtension(filename, this.token);
-            Max = dts.getLastFileChunck(filename, this.token);
+            dts.SaveDirectory = Path.Combine(Server.MapPath("~/Uploads/") + Merger.getFileNameWithoutExtension(filename, this.token));
+            DataSaver.LoadFilesNemes(Server.MapPath("~/Uploads/"), this.token);
+            string FileNameWT = Merger.getFullFileNameWithoutToken(filename, this.token);
+            string savedFileName = Path.Combine(Server.MapPath("~/Uploads"), FileNameWT);
+            List<string> temp = DataSaver.getCustomList(FileNameWT);
+
+            Merger m = new Merger(temp, "", this.token, '.');
+            List<string> corruptedList =  m.getCorruptedData();
+            if (corruptedList != null)
+            {
+                Max = m.getlastSequenceNumber();
+            }
+            else
+            {
+                Max = dts.getLastFileChunck(filename, this.token);
+            }
             return Json(Max, JsonRequestBehavior.AllowGet);
         }
 
