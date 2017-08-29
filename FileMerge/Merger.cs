@@ -78,7 +78,15 @@ namespace FileMerge
         }
         public static string getFullFileNameWithoutToken(string FileName,string token)
         {
-            return FileName.Substring(0, FileName.IndexOf(token));
+            if(FileName.Contains(token))
+                return FileName.Substring(0, FileName.IndexOf(token));
+            else
+                return FileName;
+        }
+        public static string getFileNameWithoutExtension(string FileName,string token)
+        {
+            string FullFileName = getFullFileNameWithoutToken(FileName, token);
+            return Path.GetFileNameWithoutExtension(FullFileName);
         }
         //private
         public int getFileNumber(string FileName)
@@ -197,6 +205,119 @@ namespace FileMerge
                     }
                 }
             }
+        }
+
+        public bool isLastChunck(string fileName)
+        {
+            int Filenumber = getFileNumber(fileName);
+            int allFilesNum = getAllFilesCount(fileName);
+            if (Filenumber == allFilesNum)
+                return true;
+            else
+                return false;
+        }
+        public List<string> getCorruptedData()
+        {
+            List<string> coll;
+            List<string> ret = new List<string>();
+            if (this.UseStream)
+                coll = this._FilesDictionary.Keys.ToList<string>();
+            else
+                coll = this._FilesList;
+            //int sep = 0;
+            int lastsq = getlastSequenceNumber();
+             ret = coll.Where(x => getFileNumber(x) <= lastsq).ToList();
+            //foreach (string str in coll)
+            //{
+            //    if (sep > 0 && getFileNumber(str) >= sep)
+            //        ret.Add(str);
+            //    else
+            //    {
+            //        if (hasNext(str, coll))
+            //            continue;
+            //        else
+            //        {
+            //            if (sep == 0)
+            //            {
+            //                int fileNum = getFileNumber(str);
+            //                if(fileNum != getAllFilesCount(str))
+            //                    sep = getFileNumber(str);
+            //            }
+            //        }
+            //    }
+            //}
+            if (ret !=null && ret.Count > 0)
+                return ret;
+            else
+                return null;
+        }
+        public string getlastSequence()
+        {
+            List<string> coll;
+            if (this.UseStream)
+                coll = this._FilesDictionary.Keys.ToList<string>();
+            else
+                coll = this._FilesList;
+
+            int Min = 98765;
+            int Max = getAllFilesCount(coll.First());
+            string ret =null;
+            foreach (string str in coll)
+            {
+                if (hasNext(str, coll))
+                    continue;
+                else
+                {
+                    int Filenum = getFileNumber(str);
+                    if (Filenum < Min)
+                    {
+                        Min = Filenum;
+                        ret = str;
+                    }
+                }
+            }
+            return Min==Max ? null : ret;
+        }
+        public int getlastSequenceNumber()
+        {
+            List<string> coll;
+            if (this.UseStream)
+                coll = this._FilesDictionary.Keys.ToList<string>();
+            else
+                coll = this._FilesList;
+            int Min = 874392;
+            int Max = getAllFilesCount(coll.First());
+            foreach (string str in coll)
+            {
+                if (hasNext(str, coll))
+                    continue;
+                else
+                {
+                    int Filenum = getFileNumber(str);
+                    if (Filenum < Min)
+                    {
+                        Min = Filenum;
+                    }
+                }
+            }
+            return  Min==Max ? -1 : Min ;
+        }
+        private bool hasNext(string current , List<string> coll)
+        {
+            int num = getFileNumber(current);
+            string neu = changeFileNum(current, num + 1);
+            if (coll.Contains(neu))
+                return true;
+            return false;
+        }
+
+        public string changeFileNum(string current,int Neunum)
+        {
+            int last_ = current.LastIndexOf(_Tocken);
+            int lastDot = current.LastIndexOf(_FilesCountSeprator);
+            string strBeforNum = current.Substring(0, last_ + _Tocken.Length);
+            string strAfterNum = current.Substring(lastDot,current.Length-lastDot);
+            return strBeforNum + Neunum.ToString() + strAfterNum ;
         }
     }
 }
