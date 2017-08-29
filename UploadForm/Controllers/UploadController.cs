@@ -312,13 +312,18 @@ namespace UploadForm.Controllers
                 string FileNameWT = Merger.getFullFileNameWithoutToken(fileName, this.token);
                 string savedFileName = Path.Combine(Server.MapPath("~/Uploads"), FileNameWT);
                 List<string> temp = DataSaver.getCustomList(FileNameWT);
-                Merger m = new Merger(temp, savedFileName, this.token, '.');
-                if (m.CheckTheFiles())
+                if (temp != null && temp.Count > 0)
                 {
-                    m.Merge();
-                    dtS.DeleteAllEntries(Merger.getFullFileNameWithoutToken(fileName, this.token));
-                    ret = true;
+                    Merger m = new Merger(temp, savedFileName, this.token, '.');
+                    if (m.CheckTheFiles())
+                    {
+                        m.Merge();
+                        dtS.DeleteAllEntries(Merger.getFullFileNameWithoutToken(fileName, this.token));
+                        ret = true;
+                    }
                 }
+                else
+                    ret = true;
             }
             if (ret)
                 return Json("Success :)", JsonRequestBehavior.AllowGet);
@@ -330,21 +335,20 @@ namespace UploadForm.Controllers
         public ActionResult RecievedData()
         {
             string filename = Request.Params["id"];
-            int Max = 0;
+            int Max = -1;
             DataSaver dts = new DataSaver(false);
             dts.SaveDirectory = Path.Combine(Server.MapPath("~/Uploads/") + Merger.getFileNameWithoutExtension(filename, this.token));
             DataSaver.LoadFilesNemes(Server.MapPath("~/Uploads/"), this.token);
             string FileNameWT = Merger.getFullFileNameWithoutToken(filename, this.token);
             string savedFileName = Path.Combine(Server.MapPath("~/Uploads"), FileNameWT);
             List<string> temp = DataSaver.getCustomList(FileNameWT);
-
-            Merger m = new Merger(temp, "", this.token, '.');
-            List<string> corruptedList =  m.getCorruptedData();
-            if (corruptedList != null)
+            if (temp != null && temp.Count > 0)
             {
+                Merger m = new Merger(temp, "", this.token, '.');
+                //List<string> corruptedList =  m.getCorruptedData();
                 Max = m.getlastSequenceNumber();
             }
-            else
+            else 
             {
                 Max = dts.getLastFileChunck(filename, this.token);
             }

@@ -216,7 +216,6 @@ namespace FileMerge
             else
                 return false;
         }
-
         public List<string> getCorruptedData()
         {
             List<string> coll;
@@ -225,30 +224,32 @@ namespace FileMerge
                 coll = this._FilesDictionary.Keys.ToList<string>();
             else
                 coll = this._FilesList;
-            int sep = 0;
-            foreach (string str in coll)
-            {
-                if (sep > 0 && getFileNumber(str) >= sep)
-                    ret.Add(str);
-                else
-                {
-                    if (hasNext(str, coll))
-                        continue;
-                    else
-                    {
-                        if (sep == 0)
-                        {
-                            int fileNum = getFileNumber(str);
-                            if(fileNum != getAllFilesCount(str))
-                                sep = getFileNumber(str);
-                        }
-                    }
-                }
-            }
-            if (ret.Count == 0)
-                return null;
-            else
+            //int sep = 0;
+            int lastsq = getlastSequenceNumber();
+             ret = coll.Where(x => getFileNumber(x) <= lastsq).ToList();
+            //foreach (string str in coll)
+            //{
+            //    if (sep > 0 && getFileNumber(str) >= sep)
+            //        ret.Add(str);
+            //    else
+            //    {
+            //        if (hasNext(str, coll))
+            //            continue;
+            //        else
+            //        {
+            //            if (sep == 0)
+            //            {
+            //                int fileNum = getFileNumber(str);
+            //                if(fileNum != getAllFilesCount(str))
+            //                    sep = getFileNumber(str);
+            //            }
+            //        }
+            //    }
+            //}
+            if (ret !=null && ret.Count > 0)
                 return ret;
+            else
+                return null;
         }
         public string getlastSequence()
         {
@@ -258,14 +259,24 @@ namespace FileMerge
             else
                 coll = this._FilesList;
 
-            foreach(string str in coll)
+            int Min = 98765;
+            int Max = getAllFilesCount(coll.First());
+            string ret =null;
+            foreach (string str in coll)
             {
                 if (hasNext(str, coll))
                     continue;
                 else
-                    return str;
+                {
+                    int Filenum = getFileNumber(str);
+                    if (Filenum < Min)
+                    {
+                        Min = Filenum;
+                        ret = str;
+                    }
+                }
             }
-            return null;
+            return Min==Max ? null : ret;
         }
         public int getlastSequenceNumber()
         {
@@ -274,15 +285,22 @@ namespace FileMerge
                 coll = this._FilesDictionary.Keys.ToList<string>();
             else
                 coll = this._FilesList;
-
+            int Min = 874392;
+            int Max = getAllFilesCount(coll.First());
             foreach (string str in coll)
             {
                 if (hasNext(str, coll))
                     continue;
                 else
-                    return getFileNumber(str);
+                {
+                    int Filenum = getFileNumber(str);
+                    if (Filenum < Min)
+                    {
+                        Min = Filenum;
+                    }
+                }
             }
-            return -1;
+            return  Min==Max ? -1 : Min ;
         }
         private bool hasNext(string current , List<string> coll)
         {
