@@ -2,7 +2,7 @@
 var CurrentProg = 0;
 var startProg = 0;
 var progress = 0;
-//main Method
+//main Method  
 function Upload (UploadURL, getStateURL, UseResume, FileName,ProgressCallBack) {
     var start = 0;
     TotalProg = 0;
